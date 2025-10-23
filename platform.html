@@ -172,7 +172,10 @@
         let playerImg = new Image(); playerImg.src = "hoggif.png";
         let goblinImg = new Image(); goblinImg.src = "goblin.png";
         let coinImg = new Image(); coinImg.src = "head.png";
-
+        let sneakyImg = new Image(); sneakyImg.src = "sneaky.png";
+        let sneakyMode = false;
+        let sneakyAudio = new Audio("sneakyaudio.mp3");
+        sneakyAudio.loop = true;
 
         /* --- GAME CONSTANTS GPT CHAT <3 --- */
         const tileSize = 50, gravity = 0.6;
@@ -238,11 +241,11 @@
         /* --- COMMAND HANDLING/CONTROLS Jacob  --- */
         let testMode=false;
 
-        input.addEventListener("keydown", e => {
-            if(e.key === "Enter"){
-                const cmd = e.target.value.trim().toLowerCase();
-                e.target.value = "";
-                cmdDisplay.textContent = cmd;
+            input.addEventListener("keydown", e => {
+                if(e.key === "Enter"){
+                    const cmd = e.target.value.trim().toLowerCase();
+                    e.target.value = "";
+                    cmdDisplay.textContent = cmd;
 
                 if(cmd.includes("right") || cmd.includes("forward")){
                     player.vx = 6;
@@ -261,8 +264,12 @@
                     jumpSound.currentTime = 0;
                     jumpSound.play().catch(()=>{});
                 }
-
-
+                if(cmd === "sneaky"){
+                    sneakyMode = true;
+                    music.pause(); // stop current background music
+                    sneakyAudio.currentTime = 0;
+                    sneakyAudio.play().catch(()=>{});
+                }
                 if(cmd.includes("pause")) paused = !paused;
                 if(cmd.includes("unpause")){ if(player.x==50 && player.y==200 && player.score==0) resetPlayer(); paused = false; }
                 if(cmd.includes("menu")) paused = true;
@@ -324,8 +331,20 @@
         }
 
         /* --- MAIN UPDATE LOOP GPT CHAT <3 --- */
-        function update(){
-            if(paused){requestAnimationFrame(update);return;}
+            function update(){
+                if(paused){requestAnimationFrame(update);return;}
+
+                // Background
+                if(sneakyMode){
+                    ctx.drawImage(sneakyImg, 0, 0, canvas.width, canvas.height);
+                } else {
+                    fadeSky();
+                    const grad=ctx.createLinearGradient(0,0,0,canvas.height);
+                    grad.addColorStop(0,rgbStr(skyTop));
+                    grad.addColorStop(1,rgbStr(skyBottom));
+                    ctx.fillStyle=grad;
+                    ctx.fillRect(0,0,canvas.width,canvas.height);
+                }
 
             // Background sky fade
             fadeSky();
@@ -416,6 +435,9 @@
 
         /* --- CLOSE BIO POPUP gptchat--- */ 
         bioClose.addEventListener("click",()=>bioPopup.style.display="none");
+
+
+
     </script>
 </body>
 </html>
