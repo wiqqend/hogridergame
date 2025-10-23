@@ -1,131 +1,193 @@
-# 🚀 Deployment Guide for Type-to-Move Platformer
+# 🕹️ Type-to-Move Platformer
+### Deployment & Usage Guide
 
-This document explains how to deploy and run your **Type-to-Move Platformer** game locally or online.
-
----
-
-## 🧩 Project Overview
-
-This game is a **browser-based platformer** built with HTML, CSS, and JavaScript. It features type-to-move mechanics, background music, jump and death sound effects, and a start menu.
+**Developed by:** Jacob & Jamie  
+**Project Type:** HTML5 / JavaScript Web Game  
+**Version:** 1.0  
+**Date:** October 2025  
 
 ---
 
-## 🖥️ Local Deployment (Play on Your Computer)
+## 📁 1. Project Overview
 
-### Step 1: Download or Copy Project Files
+**Type-to-Move Platformer** is a retro-styled, command-based platformer game where the player controls a character by typing commands such as `jump`, `left`, or `right`.  
+The project is built entirely in **HTML, CSS, and JavaScript**, requiring no external dependencies or installation of libraries.
 
-Ensure your project folder contains:
-```
-index.html
-jump.mp3
-dead.mp3
-music.mp3
-```
-
-> You can include other assets such as images, level files, or additional sound effects.
-
-### Step 2: Run Locally
-
-To test locally, open `index.html` in your browser.
-
-#### Option A – Double-click:
-Simply **double-click** the `index.html` file.
-
-#### Option B – Local server (recommended):
-If you encounter audio or script issues due to browser security restrictions, serve the game locally:
-
-**Using VS Code (Recommended):**
-1. Install the **Live Server** extension.
-2. Right-click `index.html` → **Open with Live Server**.
-
-**Using Command Line:**
-```bash
-# Python 3.x
-python -m http.server 8000
-```
-Then open: [http://localhost:8000](http://localhost:8000)
+Players can explore randomly generated terrain, collect coins, avoid enemies, and survive dangerous lava pits — all while listening to dynamic sound effects and background music.
 
 ---
 
-## 🌍 Online Deployment (Play on the Web)
+## ⚙️ 2. System Requirements
 
-### Option 1: GitHub Pages (Free)
+**Minimum Requirements:**
+- Modern Web Browser (Google Chrome, Microsoft Edge, Firefox, or Safari)
+- JavaScript enabled
+- Audio support for MP3 files
+- Screen resolution of **at least 1200×600 pixels**
 
-1. Go to your GitHub account.
-2. Create a new repository — name it something like `type-to-move-platformer`.
-3. Upload all files (`index.html`, `music.mp3`, `jump.mp3`, `dead.mp3`, etc.).
-4. Go to **Settings → Pages**.
-5. Under “Build and deployment,” set:
-   - **Source:** Deploy from branch
-   - **Branch:** `main` (or `master`)
-6. Click **Save**.
-
-GitHub will provide a URL like:
-```
-https://yourusername.github.io/type-to-move-platformer/
-```
-Your game will be live there! 🎮
+**Recommended:**
+- Desktop or laptop computer (the game is not optimized for mobile)
+- Chrome Browser for best performance and audio playback
 
 ---
 
-### Option 2: Itch.io (for Indie Game Hosting)
+## 📂 3. Project Structure
 
-1. Go to [https://itch.io](https://itch.io) and create an account.
-2. Click **Upload new project**.
-3. Set **Kind of project** → `HTML (playable in browser)`.
-4. Upload your zipped folder (containing index.html and assets).
-5. Check **"This file will be played in the browser"**.
-6. Publish — your game is instantly available online.
+#Your project folder should contain the following files:
 
----
+#/TypeToMovePlatformer
+#│
+#├── index.html # Main HTML file (the game)
+#├── hoggif.png # Player sprite (Hog Rider)
+#├── goblin.png # Enemy sprite
+#├── head.png # Coin sprite
+#├── menu.png # Logo for start menu
+#│
+#├── menuaudio.mp3 # Background menu/game music
+#├── run.mp3 # Running sound effect
+#├── jump.mp3 # Jump sound effect
+#├── dead.mp3 # Death sound effect
+#│
+#└── (Optional) README.txt # Additional notes/documentation
 
-### Option 3: Netlify (Advanced & Custom Domain Support)
-
-1. Go to [https://netlify.com](https://netlify.com).
-2. Sign up and click **Add new site → Deploy manually**.
-3. Drag and drop your project folder.
-4. Done — your game will get a live `.netlify.app` URL!
-
----
-
-## 🧱 Folder Structure Example
-
-```
-/type-to-move-platformer
-│
-├── index.html
-├── jump.mp3
-├── dead.mp3
-├── music.mp3
-└── Deployment.md
-```
 
 ---
 
-## 🔊 Audio Tips
+## 🚀 4. Deployment Instructions
 
-- Keep file names lowercase with no spaces.
-- Use `.mp3` or `.ogg` for maximum browser support.
-- Adjust volumes in JavaScript if needed:
-```js
-jumpSound.volume = 0.7;
-deadSound.volume = 1.0; // Louder death sound
-music.volume = 0.5;
-```
+### Option 1 — Run Locally
+1. Ensure all game files are in the same folder as shown above.
+2. Open the folder on your computer.
+3. **Double-click** the `index.html` file.  
+   → This will open the game in your default web browser.
+4. The game starts with the **Start Menu**.  
+   Click the **Start** button to begin.
+
+> 💡 If the background music does not start automatically, click anywhere inside the game window (browser audio restrictions may block autoplay).
 
 ---
 
-## ⚙️ Troubleshooting
+### Option 2 — Host on a Web Server
+You can deploy this project to any static web host, such as:
+- GitHub Pages
+- Netlify
+- Vercel
+- Replit
+- Localhost via VS Code Live Server extension
+
+**Steps for GitHub Pages:**
+1. Create a new GitHub repository and upload all files.
+2. Go to **Settings → Pages**.
+3. Under *Build and Deployment*, select `Deploy from branch`.
+4. Choose the `main` branch and `/ (root)` directory.
+5. Wait for the deployment and open the provided URL.
+
+---
+
+## 🧭 5. Gameplay Instructions
+
+### 🎮 Starting the Game
+- Click **Start** on the title screen.
+- Background music (`menuaudio.mp3`) begins.
+- The player spawns on the left side of the screen.
+
+### ✏️ Typing Commands
+Use the **text box** below the game canvas to type commands.  
+Press **Enter** after typing each command.
+
+**Available Commands:**
+| Command | Description |
+|----------|--------------|
+| `left` or `back` | Move left |
+| `right` or `forward` | Move right |
+| `jump` | Jump upward |
+| `pause` | Pause the game |
+| `unpause` | Resume the game |
+| `menu` | Open the pause menu |
+| `bio` | Show developer bios |
+| `testmode` | Unlock arrow key controls for testing |
+
+---
+
+### ⌨️ Test Mode Controls
+Once `testmode` is enabled, you can use:
+- **ArrowRight** → Move right  
+- **ArrowLeft** → Move left  
+- **ArrowUp** → Jump  
+
+This mode is primarily for debugging or casual play.
+
+---
+
+## 🔊 6. Audio Behavior
+
+| Sound | File | Trigger |
+|--------|------|----------|
+| Background Music | `menuaudio.mp3` | Starts when game begins |
+| Jump Sound | `jump.mp3` | Each jump command |
+| Run Sound | `run.mp3` | Each movement command |
+| Death Sound | `dead.mp3` | When the player dies |
+
+> The **death sound** is intentionally set to *high volume* for dramatic effect.
+
+---
+
+## 💀 7. Death & Reset Logic
+- The player dies if:
+  - Falling into **lava**
+  - Colliding with an **enemy**
+  - Falling below the screen
+- When the player dies:
+  - The game pauses
+  - `dead.mp3` plays
+  - A Game Over alert shows the score
+  - The player resets to the starting position
+
+---
+
+## 🧱 8. Game Features Summary
+
+✅ Random terrain generation  
+✅ Dynamic sky color fading  
+✅ Collectible coins  
+✅ Platform gaps and floating platforms  
+✅ Real-time scoring system  
+✅ Responsive sound effects  
+✅ Developer bios popup  
+✅ Command-based input system  
+✅ Debug/Test mode with arrow key support  
+
+---
+
+## 🧩 9. Troubleshooting
 
 | Issue | Cause | Fix |
-|-------|--------|-----|
-| Audio doesn’t play | Browser blocks autoplay | Start music after user input (e.g. clicking Start button) |
-| Controls not responding | Wrong file paths or console errors | Open DevTools (F12) → Console tab |
-| Game not loading online | Missing files or case-sensitive file names | Ensure all asset names match exactly |
+|--------|--------|-----|
+| **No sound** | Browser blocks autoplay | Click anywhere inside the page before starting |
+| **Player doesn’t move** | Forgot to type “Enter” after a command | Always press Enter to execute |
+| **Lava not showing** | Missing terrain generation | Refresh or check console for errors |
+| **Sprites not visible** | Wrong file path or missing image | Ensure all `.png` files are in same folder |
+| **Game doesn’t start** | Missing Start button click | Click **Start** in the start menu to begin |
 
 ---
 
-## 🏁 That’s It!
+## 🧑‍💻 10. Developer Notes
 
-Your **Type-to-Move Platformer** is ready to play and share.  
-Happy coding and gaming! 🎮🔥
+- The game logic, physics, and rendering loop are all written in **vanilla JavaScript** (no frameworks).
+- The map is procedurally generated using random height shifts and lava gaps.
+- All rendering is done via the **HTML5 Canvas API**.
+- Fonts and graphics are styled for a retro arcade aesthetic using `Press Start 2P`.
+
+---
+
+## 📜 11. License & Credits
+
+**Developers:**  
+- Jamie — Visual design, menus, and bio system  
+- Jacob — Core gameplay, command logic, and sound integration  
+
+**Assets:**  
+- Sprites & sound effects created by the developers or sourced from royalty-free libraries.  
+- Font: *Press Start 2P* by Codeman38 (Google Fonts)
+
+**License:** Educational / Non-commercial use permitted.
