@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Type-to-Move Platformer</title>
+    <style>
+        /* --- BASIC PAGE STYLING - jamie --- */
+        body {
+            background: #000; /* Black background for a retro feel */
+            overflow: hidden; /* Prevent scrolling */
+            font-family: "Press Start 2P", monospace; /* Pixel-style font */
+        }
+        canvas {
+            display: block;
+            margin: 10px auto;
+            border: 4px solid #333;
+            width: 1200px;
+            height: 600px;
+        }
+
+        /* --- COMMAND INPUT BOX - jamie --- */
+        #commandInput {
+            font-size: 16px;
+            padding: 10px;
+            width: 500px;
+            margin: 10px auto;
+            border: 3px solid #333;
+            border-radius: 8px;
+            display: block;
+            text-align: center;
+        }
+
+        /* --- IN-GAME MENU (COMMAND LIST, LEVEL, ETC.) - jamie --- */
+        #menu {
+            position: absolute;
+            bottom: 10px;
+            right: 50px;
+            background: rgba(255,255,255,0.9);
+            border: 3px solid #333;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 5; /* Stays above canvas */
+        }
+
+        /* --- BIO POPUP (DEVELOPER BIOS)  - jamie --- */
+        #bioPopup {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            width: 300px;
+            background: rgba(255,255,255,0.95);
+            border: 3px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            display: none; /* Hidden by default */
+            z-index: 10;
+            font-size: 12px;
+        }
+        .bioEntry { margin-bottom: 10px; display: flex; align-items: center; }
+        .bioEntry img { width: 50px; height: 50px; border-radius: 6px; margin-right: 10px; }
+        #bioClose { display:block; margin-top: 5px; text-align: right; cursor:pointer; color: blue; text-decoration: underline; }
+
+        /* --- START MENU SCREEN - jamie --- */
+        #startMenu {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(180deg, #222 0%, #000 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20; /* Highest layer */
+        }
+        #startMenu img {
+            width: 400px;
+            margin-bottom: -50px;
+            image-rendering: pixelated;
+        }
+        #startMenu button {
+            font-family: "Press Start 2P", monospace;
+            font-size: 16px;
+            padding: 15px 30px;
+            border: 3px solid #ffffff;
+            background: transparent;
+            color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin: 10px;
+        }
+
+        #startMenu button:hover {
+            background: #fff;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <!-- --- START MENU ---jacob -->
+    <div id="startMenu">
+        <img src="menu.png" alt="Game Logo">
+        <button id="startButton">Start</button>
+        <button id="menuButton">made by One Toe</button>
+    </div>
+
+    <!-- --- HUD --- jamie -->
+    <div id="menu">
+        <div><strong>Commands:</strong></div>
+        <div>jump | left | right | pause</div>
+        <div id="lastCommand"><strong>Last Command:</strong> <span id="cmdDisplay">None</span></div>
+    </div>
+
+    <!-- ---  BIO POPUP --- jamie -->
+    <div id="bioPopup">
+        <div class="bioEntry">
+            <img src="jam.png">
+            <div>I'm Jamey this is the best code ever on 67</div>
+        </div>
+        <div class="bioEntry">
+            <img src="jac.png">
+            <div>I'm Jacob, yeah thats me, hi.</div>
+        </div>
+        <div id="bioClose">Close</div>
+    </div>
+
+    <!-- --- game winow + textbox --- jacob -->
+    <canvas id="gameCanvas" width="1200" height="600"></canvas>
+    <input id="commandInput" type="text" placeholder="Type a command...">
+
+    <!-- --- BACKGROUND MUSIC --- jacob/jamie -->
+    <audio id="bgMusic" src="menuaudio.mp3" loop></audio>
+    <audio id="runSound" src="run.mp3"></audio>
+    <audio id="deadSound" src="dead.mp3"></audio>
+    <audio id="jumpSound" src="jump.mp3"></audio>
+
+
+
+    <!--  js code -- GPT CHAT <3 --> 
+    <script>
+        
+        /* --- ELEMENT REFERENCES --- */
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const input = document.getElementById("commandInput");
+        const cmdDisplay = document.getElementById("cmdDisplay");
+        const bioPopup = document.getElementById("bioPopup");
+        const bioClose = document.getElementById("bioClose");
+        const startMenu = document.getElementById("startMenu");
+        const startButton = document.getElementById("startButton");
+        const music = document.getElementById("bgMusic");
+        const runSound = document.getElementById("runSound");
+        const deadSound = document.getElementById("deadSound");
+        deadSound.volume = 1.0; // full volume
+        const jumpSound = document.getElementById("jumpSound");
+        jumpSound.volume = 1.0; // good volume balance (1.0 = max)
+
+
+
+
+        /* --- START GAME BUTTON LOGIC GPT CHAT <3 --- */
+        startButton.addEventListener("click", () => {
+            startMenu.style.display = "none"; // Hide start screen
+            music.play().catch(()=>{});       // Play music
+            paused = false;                   // Unpause game
+            update();                         // Start game loop
+        });
+
+        /* --- LOAD IMAGES JACOB/JAMIE--- */
+        let playerImg = new Image(); playerImg.src = "hoggif.png";
+        let goblinImg = new Image(); goblinImg.src = "goblin.png";
+        let coinImg = new Image(); coinImg.src = "head.png";
+
+
+        /* --- GAME CONSTANTS GPT CHAT <3 --- */
+        const tileSize = 50, gravity = 0.6;
+        let scrollX = 0, paused = true, totalScore = 0;
+
+        /* --- SKY GRADIENT COLORS JACOB/JAMIE--- */
+        let skyTop = {r:135,g:206,b:235}, skyBottom = {r:139,g:195,b:76};
+        let targetSkyTop={...skyTop}, targetSkyBottom={...skyBottom};
+        const skyFadeSpeed=0.5;
+
+        /* --- FUNCTIONS TO FADE SKY COLORS GPT CHAT <3 --- */
+        function randomColorObj(){return{r:Math.random()*256|0,g:Math.random()*256|0,b:Math.random()*256|0};}
+        function updateTargetSkyColors(){targetSkyTop=randomColorObj();targetSkyBottom=randomColorObj();}
+        setInterval(updateTargetSkyColors,3000);
+        function lerp(a,b,t){return a+(b-a)*t;}
+        function fadeSky(){
+            skyTop.r=lerp(skyTop.r,targetSkyTop.r,skyFadeSpeed);
+            skyTop.g=lerp(skyTop.g,targetSkyTop.g,skyFadeSpeed);
+            skyTop.b=lerp(skyTop.b,targetSkyTop.b,skyFadeSpeed);
+            skyBottom.r=lerp(skyBottom.r,targetSkyBottom.r,skyFadeSpeed);
+            skyBottom.g=lerp(skyBottom.g,targetSkyBottom.g,skyFadeSpeed);
+            skyBottom.b=lerp(skyBottom.b,targetSkyBottom.b,skyFadeSpeed);
+        }
+        function rgbStr(c){return`rgb(${c.r|0},${c.g|0},${c.b|0})`;}
+
+        /* --- WORLD GENERATION GPT CHAT <3 --- */
+        const worldWidth=1000000, terrain=[1000], greyPlatforms=[], enemies=[100], coins=[];
+        let lastHeight=6;
+
+        // Generate terrain columns GPT CHAT <3 
+        for(let x=0;x<worldWidth/tileSize;x++){
+            let change=Math.floor(Math.random()*3)-1;
+            lastHeight=Math.min(Math.max(4,lastHeight+change),8);
+            let column=[];
+            for(let y=0;y<canvas.height/tileSize;y++){
+                if(y<lastHeight)column.push("air");
+                else if(y===lastHeight)column.push("grass");
+                else if(y>lastHeight&&y<=lastHeight+2)column.push("dirt");
+                else column.push("stone");
+            }
+            terrain.push(column);
+        }
+
+        // Add gaps, platforms, and coins GPT CHAT <3 
+        for(let x=1;x<terrain.length-50;x++){
+            let gapWidth=1;
+            while(Math.random()<0.1){gapWidth++;x++;}
+            if(gapWidth>=2){
+                // Make a gap with lava underneath
+                for(let w=0;w<gapWidth;w++){for(let y=0;y<terrain[x+w].length;y++){terrain[x+w][y]="air";}}
+                const lavaHeight=Math.floor(canvas.height/tileSize)-2;
+                for(let w=0;w<gapWidth;w++){for(let y=lavaHeight;y<terrain[x+w].length;y++){terrain[x+w][y]="lava";}}
+                // Add a floating grey platform and coins above it
+                let groundY=(terrain[x-1].findIndex(t=>t!=="air")-1)*tileSize;
+                greyPlatforms.push({x:(x-1)*tileSize,y:groundY-80,w:gapWidth*tileSize,h:20});
+                for(let c=0;c<gapWidth;c++){coins.push({x:(x-1+c)*tileSize+tileSize/2,y:groundY-110,collected:false});}
+            }
+        }
+
+        /* --- HELPER TO FIND GROUND HEIGHT GPT CHAT <3  --- */
+        function findGroundY(xTile){const col=terrain[xTile];for(let y=0;y<col.length;y++){if(col[y]!=="air")return y*tileSize;}return canvas.height-tileSize*3;}
+
+        /* --- COMMAND HANDLING/CONTROLS Jacob  --- */
+        let testMode=false;
+
+        input.addEventListener("keydown", e => {
+            if(e.key === "Enter"){
+                const cmd = e.target.value.trim().toLowerCase();
+                e.target.value = "";
+                cmdDisplay.textContent = cmd;
+
+                if(cmd.includes("right") || cmd.includes("forward")){
+                    player.vx = 6;
+                    runSound.currentTime = 0;
+                    runSound.play().catch(()=>{});
+                }
+                if(cmd.includes("left") || cmd.includes("back")){
+                    player.vx = -6;
+                    runSound.currentTime = 0;
+                    runSound.play().catch(()=>{});
+                }
+                if(cmd.includes("jump") && !player.jumping){
+                    player.vy = -12;
+                    player.jumping = true;
+
+                    jumpSound.currentTime = 0;
+                    jumpSound.play().catch(()=>{});
+                }
+
+
+                if(cmd.includes("pause")) paused = !paused;
+                if(cmd.includes("unpause")){ if(player.x==50 && player.y==200 && player.score==0) resetPlayer(); paused = false; }
+                if(cmd.includes("menu")) paused = true;
+                if(cmd.includes("bio")) bioPopup.style.display = "block";
+                if(cmd === "testmode"){ testMode = true; cmdDisplay.textContent = "Test mode enabled!"; }
+            }
+        });
+
+        /* --- ARROW KEY MOVEMENT FOR TESTMODE Jacob --- */
+        document.addEventListener("keydown",e=>{
+            if(!testMode)return;
+            if(e.key==="ArrowRight")player.vx=6;
+            if(e.key==="ArrowLeft")player.vx=-6;
+            if(e.key==="ArrowUp"&&!player.jumping){player.vy=-12;player.jumping=true;}
+        });
+
+        /* --- SPAWN ENEMIES GPT CHAT <3  --- */
+        const enemyPositions=[];
+        enemyPositions.forEach(xPos=>{
+            const xTile=Math.floor(xPos/tileSize);
+            const groundY=findGroundY(xTile);
+            enemies.push({x:xPos,y:groundY-tileSize*1.2,w:tileSize*1.2,h:tileSize*1.2,vx:0});
+        });
+
+        /* --- PLAYER SETUP GPT CHAT <3 --- */
+        let player={x:50,y:0,w:tileSize*1.5,h:tileSize*1.5,vx:0,vy:0,score:0,jumping:false,maxDistance:0,touchingWall:false,wallSide:0};
+
+        /* --- DRAW FUNCTIONS GPT CHAT <3 --- */
+        function drawTerrain(){for(let x=0;x<terrain.length;x++){for(let y=0;y<terrain[x].length;y++){const b=terrain[x][y];if(b==="air")continue;const px=x*tileSize-scrollX,py=y*tileSize;if(b==="grass")ctx.fillStyle="#4CAF50";else if(b==="dirt")ctx.fillStyle="#8B4513";else if(b==="stone")ctx.fillStyle="#696969";else if(b==="lava"){const g=ctx.createLinearGradient(px,py,px,py+tileSize);g.addColorStop(0,"#FF6600");g.addColorStop(1,"#AA0000");ctx.fillStyle=g;}ctx.fillRect(px,py,tileSize,tileSize);}}}
+        function drawGreyPlatforms(){ctx.fillStyle="#888";greyPlatforms.forEach(p=>ctx.fillRect(p.x-scrollX,p.y,p.w,p.h));}
+        function drawCoins(){
+            coins.forEach(c=>{
+                if(!c.collected){
+                    const size = 30; // adjust if needed
+                    ctx.drawImage(coinImg, c.x - scrollX - size/2, c.y - size/2, size, size);
+                }
+            });
+        }
+
+        function drawEnemies(){enemies.forEach(e=>ctx.drawImage(goblinImg,e.x-scrollX,e.y +50,e.w,e.h));}
+        function drawPlayer(){ctx.drawImage(playerImg,player.x-scrollX,player.y,player.w,player.h);}
+
+        /* --- PLAYER RESET & DEATH GPT CHAT <3 --- */
+        function resetPlayer(){player.x=50;player.y=200;player.vx=0;player.vy=0;player.jumping=false;}
+        function death(){
+            paused = true;
+            runSound.pause();
+            runSound.currentTime = 0;
+
+            deadSound.currentTime = 0;
+            deadSound.volume = 1.0;
+            deadSound.play().catch(()=>{});
+
+            setTimeout(() => {
+                alert("💀 Game Over! Score: " + Math.floor(player.score));
+                resetPlayer();
+                totalScore = 0;
+            }, 500); // waits half a second for the sound
+        }
+
+        /* --- MAIN UPDATE LOOP GPT CHAT <3 --- */
+        function update(){
+            if(paused){requestAnimationFrame(update);return;}
+
+            // Background sky fade
+            fadeSky();
+            const grad=ctx.createLinearGradient(0,0,0,canvas.height);
+            grad.addColorStop(0,rgbStr(skyTop));
+            grad.addColorStop(1,rgbStr(skyBottom));
+            ctx.fillStyle=grad;
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+
+            // Physics GPT CHAT <3 
+            player.vy+=gravity;
+            player.y+=player.vy;
+            player.x+=player.vx;
+            player.vx*=0.9;
+
+            // Collision handling GPT CHAT <3 
+            let onGround=false;
+            const bounceFactor=0.4;
+            const playerLeft=player.x,playerRight=player.x+player.w,playerTop=player.y,playerBottom=player.y+player.h;
+            const tileStartX=Math.floor(playerLeft/tileSize),tileEndX=Math.floor(playerRight/tileSize);
+            const tileStartY=Math.floor(playerTop/tileSize),tileEndY=Math.floor(playerBottom/tileSize);
+
+            // Tile collisions GPT CHAT <3 
+            for(let tx=tileStartX;tx<=tileEndX;tx++){
+                for(let ty=tileStartY;ty<=tileEndY;ty++){
+                    const tile=(terrain[tx]||[])[ty];
+                    if(!tile||tile==="air"||tile==="lava")continue;
+                    const tileX=tx*tileSize,tileY=ty*tileSize;
+                    const overlapX=Math.min(playerRight-tileX,tileX+tileSize-playerLeft);
+                    const overlapY=Math.min(playerBottom-tileY,tileY+tileSize-playerTop);
+                    if(overlapY<overlapX){
+                        // Vertical collision
+                        if(player.vy>0&&playerBottom-player.vy<=tileY){
+                            player.y=tileY-player.h;player.vy=-Math.abs(player.vy)*bounceFactor;
+                            if(Math.abs(player.vy)<2){player.vy=0;onGround=true;player.jumping=false;}
+                        }
+                        else if(player.vy<0&&playerTop-player.vy>=tileY+tileSize){
+                            player.y=tileY+tileSize;player.vy=Math.abs(player.vy)*bounceFactor;
+                        }
+                    } else {
+                        // Horizontal collision
+                        if(playerRight-player.vx<=tileX){player.x=tileX-player.w;player.vx=-Math.abs(player.vx)*bounceFactor;}
+                        else if(playerLeft-player.vx>=tileX+tileSize){player.x=tileX+tileSize;player.vx=Math.abs(player.vx)*bounceFactor;}
+                    }
+                }
+            }
+
+            // Platform collision GPT CHAT <3 
+            greyPlatforms.forEach(p=>{
+                if(player.x+player.w>p.x&&player.x<p.x+p.w&&player.y+player.h>p.y&&player.y+player.h<p.y+p.h+10&&player.vy>=0){
+                    player.y=p.y-player.h;player.vy=0;player.jumping=false;onGround=true;
+                }
+            });
+
+            // Coin collection GPT CHAT <3 
+            coins.forEach(c=>{
+                if(!c.collected&&player.x+player.w>c.x-10&&player.x<c.x+10&&player.y+player.h>c.y-10&&player.y<c.y+10){
+                    c.collected=true;player.score+=5;totalScore+=5;
+                }
+            });
+
+            // Lava death Jacob/Jamie
+            const playerTileX=Math.floor((player.x+player.w/2)/tileSize);
+            const playerTileY=Math.floor((player.y+player.h)/tileSize);
+            if(terrain[playerTileX]&&terrain[playerTileX][playerTileY]==="lava"){death();}
+
+            // Enemy collision 
+            enemies.forEach(e=>{
+                if(player.x<e.x+e.w&&player.x+player.w>e.x&&player.y<e.y+e.h&&player.y+player.h>e.y){death();}
+            });
+
+            // Fall off screen death jacob/jamie
+            if(player.y>canvas.height){death();}
+
+            // Scrolling camera gpt chat
+            scrollX=Math.max(0,player.x-canvas.width/2);
+
+            // Draw everything jacob
+            drawTerrain();drawGreyPlatforms();drawCoins();drawEnemies();drawPlayer();
+
+            // Score HUD gptchat
+            ctx.fillStyle="#000";ctx.font="20px monospace";
+            ctx.fillText("Score: "+Math.floor(player.score),10,30);
+            ctx.fillText("Total: "+totalScore,10,55);
+
+            requestAnimationFrame(update);
+        }
+
+        /* --- CLOSE BIO POPUP gptchat--- */ 
+        bioClose.addEventListener("click",()=>bioPopup.style.display="none");
+    </script>
+</body>
+</html>
