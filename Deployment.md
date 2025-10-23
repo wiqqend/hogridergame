@@ -32,23 +32,36 @@ Players can explore randomly generated terrain, collect coins, avoid enemies, an
 ---
 
 ## 📂 3. Project Structure
+Your project folder should contain the following files:
 
-#Your project folder should contain the following files:
+/TypeToMovePlatformer
 
-#/TypeToMovePlatformer
-#│
-#├── index.html # Main HTML file (the game)
-#├── hoggif.png # Player sprite (Hog Rider)
-#├── goblin.png # Enemy sprite
-#├── head.png # Coin sprite
-#├── menu.png # Logo for start menu
-#│
-#├── menuaudio.mp3 # Background menu/game music
-#├── run.mp3 # Running sound effect
-#├── jump.mp3 # Jump sound effect
-#├── dead.mp3 # Death sound effect
-#│
-#└── (Optional) README.txt # Additional notes/documentation
+│
+
+├── index.html # Main HTML file (the game)
+
+├── hoggif.png # Player sprite (Hog Rider)
+
+├── goblin.png # Enemy sprite
+
+├── head.png # Coin sprite
+
+├── menu.png # Logo for start menu
+
+│
+
+├── menuaudio.mp3 # Background menu/game music
+
+├── run.mp3 # Running sound effect
+
+├── jump.mp3 # Jump sound effect
+
+├── dead.mp3 # Death sound effect
+
+│
+
+└── (Optional) README.txt # Additional notes/documentation
+
 
 
 ---
