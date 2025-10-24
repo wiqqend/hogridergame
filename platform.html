@@ -96,24 +96,63 @@
             background: #fff;
             color: #000;
         }
+
+        /* --- NEW: DEATH SCREEN STYLING --- */
+        #deathScreen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8); /* Semi-transparent black */
+            color: white;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 19; /* Just below start menu */
+            font-size: 24px;
+        }
+        #deathScreen h2 {
+            color: #FF4444; /* Red color for 'Game Over' */
+            font-size: 40px;
+        }
+        #deathScreen button {
+            /* Use same style as start button */
+            font-family: "Press Start 2P", monospace;
+            font-size: 16px;
+            padding: 15px 30px;
+            border: 3px solid #ffffff;
+            background: transparent;
+            color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 30px;
+        }
+        #deathScreen button:hover {
+            background: #fff;
+            color: #000;
+        }
+
     </style>
 </head>
 <body>
-    <!-- --- START MENU ---jacob -->
     <div id="startMenu">
         <img src="menu.png" alt="Game Logo">
         <button id="startButton">Start</button>
         <button id="menuButton">made by One Toe</button>
     </div>
 
-    <!-- --- HUD --- jamie -->
+    <div id="deathScreen">
+        <h2>Game Over!</h2>
+        <div>Score: <span id="finalScore">0</span></div>
+        <button id="retryButton">Retry</button>
+    </div>
+
     <div id="menu">
         <div><strong>Commands:</strong></div>
         <div>jump | left | right | pause</div>
         <div id="lastCommand"><strong>Last Command:</strong> <span id="cmdDisplay">None</span></div>
     </div>
 
-    <!-- ---  BIO POPUP --- jamie -->
     <div id="bioPopup">
         <div class="bioEntry">
             <img src="jam.png">
@@ -126,11 +165,9 @@
         <div id="bioClose">Close</div>
     </div>
 
-    <!-- --- game winow + textbox --- jacob -->
     <canvas id="gameCanvas" width="1200" height="600"></canvas>
     <input id="commandInput" type="text" placeholder="Type a command...">
 
-    <!-- --- BACKGROUND MUSIC --- jacob/jamie -->
     <audio id="bgMusic" src="menuaudio.mp3" loop></audio>
     <audio id="runSound" src="run.mp3"></audio>
     <audio id="deadSound" src="dead.mp3"></audio>
@@ -138,7 +175,6 @@
 
 
 
-    <!--  js code -- GPT CHAT <3 --> 
     <script>
         
         /* --- ELEMENT REFERENCES --- */
@@ -150,6 +186,12 @@
         const bioClose = document.getElementById("bioClose");
         const startMenu = document.getElementById("startMenu");
         const startButton = document.getElementById("startButton");
+
+        // --- NEW: DEATH SCREEN REFS ---
+        const deathScreen = document.getElementById("deathScreen");
+        const retryButton = document.getElementById("retryButton");
+        const finalScore = document.getElementById("finalScore");
+
         const music = document.getElementById("bgMusic");
         const runSound = document.getElementById("runSound");
         const deadSound = document.getElementById("deadSound");
@@ -238,7 +280,15 @@
         /* --- HELPER TO FIND GROUND HEIGHT GPT CHAT <3  --- */
         function findGroundY(xTile){const col=terrain[xTile];for(let y=0;y<col.length;y++){if(col[y]!=="air")return y*tileSize;}return canvas.height-tileSize*3;}
 
-        /* --- COMMAND HANDLING/CONTROLS Jacob  --- */
+        /* --- SNEAKY CLONE & COMMAND HISTORY VARIABLES --- */
+        let commandHistory = [];
+        let sneakyClone = null;
+        let sneakySpawnTimer = null;
+        let sneakyCommandIndex = -1; // Index of the 'sneaky' command in history
+        let sneakySpawnX = 0; // --- NEW: To store player's X on command
+        let sneakySpawnY = 0; // --- NEW: To store player's Y on command
+
+        /* --- COMMAND HANDLING/CONTROLS Jacob   --- */
         let testMode=false;
 
             input.addEventListener("keydown", e => {
@@ -246,6 +296,9 @@
                     const cmd = e.target.value.trim().toLowerCase();
                     e.target.value = "";
                     cmdDisplay.textContent = cmd;
+
+                    // --- Save every command with a timestamp ---
+                    commandHistory.push({ command: cmd, timestamp: Date.now() });
 
                 if(cmd.includes("right") || cmd.includes("forward")){
                     player.vx = 6;
@@ -269,14 +322,99 @@
                     music.pause(); // stop current background music
                     sneakyAudio.currentTime = 0;
                     sneakyAudio.play().catch(()=>{});
+
+                    // --- Start the 5-second spawn timer for the clone ---
+                    if (sneakySpawnTimer) clearTimeout(sneakySpawnTimer); // Clear old timer
+                    if (sneakyClone) sneakyClone.active = false; // Deactivate old clone
+                    
+                    // --- NEW: Save the player's EXACT location *now* ---
+                    sneakySpawnX = player.x;
+                    sneakySpawnY = player.y;
+
+                    sneakyCommandIndex = commandHistory.length - 1; // Get index of this "sneaky" command
+                    sneakySpawnTimer = setTimeout(spawnSneakyClone, 5000);
                 }
                 if(cmd.includes("pause")) paused = !paused;
                 if(cmd.includes("unpause")){ if(player.x==50 && player.y==200 && player.score==0) resetPlayer(); paused = false; }
                 if(cmd.includes("menu")) paused = true;
                 if(cmd.includes("bio")) bioPopup.style.display = "block";
                 if(cmd === "testmode"){ testMode = true; cmdDisplay.textContent = "Test mode enabled!"; }
+                }
+            });
+
+        /* --- NEW: SNEAKY CLONE LOGIC FUNCTIONS --- */
+        function spawnSneakyClone() {
+            if (paused) return; // Don't spawn if game is paused
+            sneakyClone = {
+                // --- NEW: Use the saved spawn coordinates ---
+                x: sneakySpawnX, 
+                y: sneakySpawnY,
+                w: player.w, // Same size as player
+                h: player.h,
+                vx: 0,
+                vy: 0, // It spawns with no vertical velocity
+                jumping: false, // It spawns on the "ground" (or in mid-air, but not jumping)
+                active: true,
+                commandToExecuteIndex: sneakyCommandIndex + 1, // Start with command *after* "sneaky"
+                nextCommandTimer: null // To hold the setTimeout
+            };
+            // Start the clone's "brain"
+            scheduleSneakyCommand();
+        }
+
+        function scheduleSneakyCommand() {
+            // Stop if clone is deactivated or game is paused
+            if (!sneakyClone || !sneakyClone.active || paused) return;
+
+            let index = sneakyClone.commandToExecuteIndex;
+
+            // Check if the command exists in history yet
+            if (index >= commandHistory.length) {
+                // Player hasn't entered a new command, so check again in 100ms
+                sneakyClone.nextCommandTimer = setTimeout(scheduleSneakyCommand, 100);
+                return;
             }
-        });
+
+            // Command exists! Calculate the time delay
+            let prevTimestamp = commandHistory[index - 1].timestamp;
+            let currentTimestamp = commandHistory[index].timestamp;
+            let delay = currentTimestamp - prevTimestamp;
+
+            // Schedule this command to run after the calculated delay
+            sneakyClone.nextCommandTimer = setTimeout(() => {
+                if (!sneakyClone || !sneakyClone.active) return; // Check again if still active
+
+                // Get the command string
+                let cmd = commandHistory[index].command;
+                
+                // Execute the command for the clone
+                executeCloneCommand(cmd);
+
+                // Move to the next command index
+                sneakyClone.commandToExecuteIndex++;
+                
+                // Schedule the *next* command lookup
+                scheduleSneakyCommand();
+
+            }, delay);
+        }
+
+        function executeCloneCommand(cmd) {
+            if (!sneakyClone) return;
+
+            // Mimic player commands (without sounds)
+            if (cmd.includes("right") || cmd.includes("forward")) {
+                sneakyClone.vx = 6;
+            }
+            if (cmd.includes("left") || cmd.includes("back")) {
+                sneakyClone.vx = -6;
+            }
+            if (cmd.includes("jump") && !sneakyClone.jumping) {
+                sneakyClone.vy = -12;
+                sneakyClone.jumping = true;
+            }
+            // Clone ignores other commands like 'pause', 'sneaky', 'bio', etc.
+        }
 
         /* --- ARROW KEY MOVEMENT FOR TESTMODE Jacob --- */
         document.addEventListener("keydown",e=>{
@@ -311,131 +449,225 @@
 
         function drawEnemies(){enemies.forEach(e=>ctx.drawImage(goblinImg,e.x-scrollX,e.y +50,e.w,e.h));}
         function drawPlayer(){ctx.drawImage(playerImg,player.x-scrollX,player.y,player.w,player.h);}
+        
+        // --- NEW: Draw function for the clone ---
+        function drawSneakyClone(){
+            if(sneakyClone && sneakyClone.active) {
+                ctx.drawImage(sneakyImg, sneakyClone.x - scrollX, sneakyClone.y, sneakyClone.w, sneakyClone.h);
+            }
+        }
+
+        /* --- REFACTORED PHYSICS & COLLISION FOR ANY ENTITY --- */
+        // This function handles ALL physics and collisions for both
+        // the player and the clone, including platforms.
+        function handleEntityPhysicsAndCollision(entity) {
+            let onGround = false;
+            
+            // Physics
+            entity.vy += gravity;
+            entity.y += entity.vy;
+            entity.x += entity.vx;
+            entity.vx *= 0.9;
+
+            // Collision handling
+            const bounceFactor = 0.4;
+            const entityLeft = entity.x, entityRight = entity.x + entity.w, entityTop = entity.y, entityBottom = entity.y + entity.h;
+            const tileStartX = Math.floor(entityLeft / tileSize), tileEndX = Math.floor(entityRight / tileSize);
+            const tileStartY = Math.floor(entityTop / tileSize), tileEndY = Math.floor(entityBottom / tileSize);
+
+            // Tile collisions
+            for (let tx = tileStartX; tx <= tileEndX; tx++) {
+                for (let ty = tileStartY; ty <= tileEndY; ty++) {
+                    const tile = (terrain[tx] || [])[ty];
+                    if (!tile || tile === "air" || tile === "lava") continue;
+                    const tileX = tx * tileSize, tileY = ty * tileSize;
+                    const overlapX = Math.min(entityRight - tileX, tileX + tileSize - entityLeft);
+                    const overlapY = Math.min(entityBottom - tileY, tileY + tileSize - entityTop);
+                    if (overlapY < overlapX) {
+                        // Vertical collision
+                        if (entity.vy > 0 && entityBottom - entity.vy <= tileY) {
+                            entity.y = tileY - entity.h; entity.vy = -Math.abs(entity.vy) * bounceFactor;
+                            if (Math.abs(entity.vy) < 2) { entity.vy = 0; onGround = true; entity.jumping = false; }
+                        } else if (entity.vy < 0 && entityTop - entity.vy >= tileY + tileSize) {
+                            entity.y = tileY + tileSize; entity.vy = Math.abs(entity.vy) * bounceFactor;
+                        }
+                    } else {
+                        // Horizontal collision
+                        if (entityRight - entity.vx <= tileX) { entity.x = tileX - entity.w; entity.vx = -Math.abs(entity.vx) * bounceFactor; }
+                        else if (entityLeft - entity.vx >= tileX + tileSize) { entity.x = tileX + tileSize; entity.vx = Math.abs(entity.vx) * bounceFactor; }
+                    }
+                }
+            }
+
+            // Platform collision (This is the logic you asked for)
+            greyPlatforms.forEach(p => {
+                if (entity.x + entity.w > p.x && entity.x < p.x + p.w && entity.y + entity.h > p.y && entity.y + entity.h < p.y + p.h + 10 && entity.vy >= 0) {
+                    entity.y = p.y - entity.h; entity.vy = 0; entity.jumping = false; onGround = true;
+                }
+            });
+
+            // This was used by the player, but we'll return it just in case
+            // (though the clone doesn't use it)
+            return onGround;
+        }
+
 
         /* --- PLAYER RESET & DEATH GPT CHAT <3 --- */
-        function resetPlayer(){player.x=50;player.y=200;player.vx=0;player.vy=0;player.jumping=false;}
+        function resetPlayer(){
+            player.x=50;player.y=200;player.vx=0;player.vy=0;player.jumping=false;
+            
+            // --- NEW: Reset sneaky clone and history ---
+            if (sneakySpawnTimer) clearTimeout(sneakySpawnTimer);
+            if (sneakyClone && sneakyClone.nextCommandTimer) clearTimeout(sneakyClone.nextCommandTimer);
+            sneakySpawnTimer = null;
+            sneakyClone = null;
+            sneakyCommandIndex = -1;
+            commandHistory = [];
+            sneakySpawnX = 0; // --- NEW: Reset spawn location
+            sneakySpawnY = 0; // --- NEW: Reset spawn location
+
+            // --- NEW: Reset sneaky mode state ---
+            sneakyMode = false;
+            sneakyAudio.pause();
+            sneakyAudio.currentTime = 0;
+        }
+
         function death(){
+            // --- NEW: Clear any sneaky timers/clones on death ---
+            if (sneakySpawnTimer) clearTimeout(sneakySpawnTimer);
+            if (sneakyClone && sneakyClone.nextCommandTimer) clearTimeout(sneakyClone.nextCommandTimer);
+            sneakySpawnTimer = null;
+            sneakyClone = null; // Make it disappear immediately
+
             paused = true;
+
+            // --- NEW: Stop all sounds ---
             runSound.pause();
             runSound.currentTime = 0;
+            music.pause();
+            sneakyAudio.pause();
 
             deadSound.currentTime = 0;
             deadSound.volume = 1.0;
             deadSound.play().catch(()=>{});
 
+            // --- NEW: Show death screen ---
+            finalScore.textContent = Math.floor(player.score);
+            deathScreen.style.display = "flex";
+
+            // --- REMOVED OLD TIMEOUT ---
+            /*
             setTimeout(() => {
-                alert("💀 Game Over! Score: " + Math.floor(player.score));
+                // We must use a custom modal/message box instead of alert()
+                // For now, I will just log to console and reset
+                console.log("💀 Game Over! Score: " + Math.floor(player.score));
+                // In a real game, you would show a death screen here
+                // alert("💀 Game Over! Score: " + Math.floor(player.score));
                 resetPlayer();
                 totalScore = 0;
+                // --- NEW: History is cleared inside resetPlayer() ---
             }, 500); // waits half a second for the sound
+            */
         }
 
         /* --- MAIN UPDATE LOOP GPT CHAT <3 --- */
             function update(){
                 if(paused){requestAnimationFrame(update);return;}
 
-                // Background
-                if(sneakyMode){
+                // --- REMOVED OLD SNEAKYMODE DRAW LOGIC ---
+
+                // Background sky fade (THIS IS DUPLICATED IN ORIGINAL - keeping it)
+                fadeSky();
+                const grad=ctx.createLinearGradient(0,0,0,canvas.height);
+                grad.addColorStop(0,rgbStr(skyTop));
+                grad.addColorStop(1,rgbStr(skyBottom));
+                ctx.fillStyle=grad;
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+
+                // --- NEW: Draw sneaky background with opacity ---
+                if (sneakyMode) {
+                    ctx.globalAlpha = 0.8; // 80% opacity ("high opacity")
                     ctx.drawImage(sneakyImg, 0, 0, canvas.width, canvas.height);
-                } else {
-                    fadeSky();
-                    const grad=ctx.createLinearGradient(0,0,0,canvas.height);
-                    grad.addColorStop(0,rgbStr(skyTop));
-                    grad.addColorStop(1,rgbStr(skyBottom));
-                    ctx.fillStyle=grad;
-                    ctx.fillRect(0,0,canvas.width,canvas.height);
+                    ctx.globalAlpha = 1.0; // Reset alpha for all other drawing
                 }
 
-            // Background sky fade
-            fadeSky();
-            const grad=ctx.createLinearGradient(0,0,0,canvas.height);
-            grad.addColorStop(0,rgbStr(skyTop));
-            grad.addColorStop(1,rgbStr(skyBottom));
-            ctx.fillStyle=grad;
-            ctx.fillRect(0,0,canvas.width,canvas.height);
+                // --- NEW: Use the refactored physics function for BOTH entities ---
+                handleEntityPhysicsAndCollision(player);
+                if (sneakyClone && sneakyClone.active) {
+                    handleEntityPhysicsAndCollision(sneakyClone);
+                }
 
-            // Physics GPT CHAT <3 
-            player.vy+=gravity;
-            player.y+=player.vy;
-            player.x+=player.vx;
-            player.vx*=0.9;
+                // Coin collection GPT CHAT <3 
+                coins.forEach(c=>{
+                    if(!c.collected&&player.x+player.w>c.x-10&&player.x<c.x+10&&player.y+player.h>c.y-10&&player.y<c.y+10){
+                        c.collected=true;player.score+=5;totalScore+=5;
+                    }
+                });
 
-            // Collision handling GPT CHAT <3 
-            let onGround=false;
-            const bounceFactor=0.4;
-            const playerLeft=player.x,playerRight=player.x+player.w,playerTop=player.y,playerBottom=player.y+player.h;
-            const tileStartX=Math.floor(playerLeft/tileSize),tileEndX=Math.floor(playerRight/tileSize);
-            const tileStartY=Math.floor(playerTop/tileSize),tileEndY=Math.floor(playerBottom/tileSize);
+                // Lava death Jacob/Jamie
+                const playerTileX=Math.floor((player.x+player.w/2)/tileSize);
+                const playerTileY=Math.floor((player.y+player.h)/tileSize);
+                if(terrain[playerTileX]&&terrain[playerTileX][playerTileY]==="lava"){death();}
 
-            // Tile collisions GPT CHAT <3 
-            for(let tx=tileStartX;tx<=tileEndX;tx++){
-                for(let ty=tileStartY;ty<=tileEndY;ty++){
-                    const tile=(terrain[tx]||[])[ty];
-                    if(!tile||tile==="air"||tile==="lava")continue;
-                    const tileX=tx*tileSize,tileY=ty*tileSize;
-                    const overlapX=Math.min(playerRight-tileX,tileX+tileSize-playerLeft);
-                    const overlapY=Math.min(playerBottom-tileY,tileY+tileSize-playerTop);
-                    if(overlapY<overlapX){
-                        // Vertical collision
-                        if(player.vy>0&&playerBottom-player.vy<=tileY){
-                            player.y=tileY-player.h;player.vy=-Math.abs(player.vy)*bounceFactor;
-                            if(Math.abs(player.vy)<2){player.vy=0;onGround=true;player.jumping=false;}
-                        }
-                        else if(player.vy<0&&playerTop-player.vy>=tileY+tileSize){
-                            player.y=tileY+tileSize;player.vy=Math.abs(player.vy)*bounceFactor;
-                        }
-                    } else {
-                        // Horizontal collision
-                        if(playerRight-player.vx<=tileX){player.x=tileX-player.w;player.vx=-Math.abs(player.vx)*bounceFactor;}
-                        else if(playerLeft-player.vx>=tileX+tileSize){player.x=tileX+tileSize;player.vx=Math.abs(player.vx)*bounceFactor;}
+                // Enemy collision 
+                enemies.forEach(e=>{
+                    if(player.x<e.x+e.w&&player.x+player.w>e.x&&player.y<e.y+e.h&&player.y+player.h>e.y){death();}
+                });
+
+                // --- NEW: Sneaky Clone collision & status checks ---
+                if (sneakyClone && sneakyClone.active) {
+                    // 1. Check for collision with player
+                    if (player.x < sneakyClone.x + sneakyClone.w &&
+                        player.x + player.w > sneakyClone.x &&
+                        player.y < sneakyClone.y + sneakyClone.h &&
+                        player.y + player.h > sneakyClone.y) {
+                        death(); // Player dies
+                    }
+                    
+                    // 2. Check if clone hits lava or falls off screen
+                    const cloneTileX = Math.floor((sneakyClone.x + sneakyClone.w / 2) / tileSize);
+                    const cloneTileY = Math.floor((sneakyClone.y + sneakyClone.h) / tileSize);
+                    if ((terrain[cloneTileX] && terrain[cloneTileX][cloneTileY] === "lava") || sneakyClone.y > canvas.height) {
+                        sneakyClone.active = false; // Deactivate clone
+                        if (sneakyClone.nextCommandTimer) clearTimeout(sneakyClone.nextCommandTimer);
                     }
                 }
+
+                // Fall off screen death jacob/jamie
+                if(player.y>canvas.height){death();}
+
+                // Scrolling camera gpt chat
+                scrollX=Math.max(0,player.x-canvas.width/2);
+
+                // Draw everything jacob
+                drawTerrain();
+                drawGreyPlatforms();
+                drawCoins();
+                drawEnemies();
+                drawPlayer();
+                drawSneakyClone(); // --- NEW: Draw the clone ---
+
+                // Score HUD gptchat
+                ctx.fillStyle="#000";ctx.font="20px monospace";
+                ctx.fillText("Score: "+Math.floor(player.score),10,30);
+                ctx.fillText("Total: "+totalScore,10,55);
+
+                requestAnimationFrame(update);
             }
-
-            // Platform collision GPT CHAT <3 
-            greyPlatforms.forEach(p=>{
-                if(player.x+player.w>p.x&&player.x<p.x+p.w&&player.y+player.h>p.y&&player.y+player.h<p.y+p.h+10&&player.vy>=0){
-                    player.y=p.y-player.h;player.vy=0;player.jumping=false;onGround=true;
-                }
-            });
-
-            // Coin collection GPT CHAT <3 
-            coins.forEach(c=>{
-                if(!c.collected&&player.x+player.w>c.x-10&&player.x<c.x+10&&player.y+player.h>c.y-10&&player.y<c.y+10){
-                    c.collected=true;player.score+=5;totalScore+=5;
-                }
-            });
-
-            // Lava death Jacob/Jamie
-            const playerTileX=Math.floor((player.x+player.w/2)/tileSize);
-            const playerTileY=Math.floor((player.y+player.h)/tileSize);
-            if(terrain[playerTileX]&&terrain[playerTileX][playerTileY]==="lava"){death();}
-
-            // Enemy collision 
-            enemies.forEach(e=>{
-                if(player.x<e.x+e.w&&player.x+player.w>e.x&&player.y<e.y+e.h&&player.y+player.h>e.y){death();}
-            });
-
-            // Fall off screen death jacob/jamie
-            if(player.y>canvas.height){death();}
-
-            // Scrolling camera gpt chat
-            scrollX=Math.max(0,player.x-canvas.width/2);
-
-            // Draw everything jacob
-            drawTerrain();drawGreyPlatforms();drawCoins();drawEnemies();drawPlayer();
-
-            // Score HUD gptchat
-            ctx.fillStyle="#000";ctx.font="20px monospace";
-            ctx.fillText("Score: "+Math.floor(player.score),10,30);
-            ctx.fillText("Total: "+totalScore,10,55);
-
-            requestAnimationFrame(update);
-        }
 
         /* --- CLOSE BIO POPUP gptchat--- */ 
         bioClose.addEventListener("click",()=>bioPopup.style.display="none");
 
+
+        /* --- NEW: RETRY BUTTON LOGIC --- */
+        retryButton.addEventListener("click", () => {
+            deathScreen.style.display = "none"; // Hide death screen
+            totalScore = 0;
+            player.score = 0; // Reset player's score
+            resetPlayer();    // Reset player position, sneaky state, etc.
+            music.play().catch(()=>{}); // Restart the main music
+            paused = false;   // Unpause the game
+        });
 
 
     </script>
